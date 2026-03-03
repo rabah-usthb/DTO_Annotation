@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.io.Writer;
 
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
 
@@ -33,6 +35,7 @@ public class DTOProcessor extends AbstractProcessor {
 
         List<String> nameDTOList = new LinkedList<>();
         List<StringBuilder> fieldsList = new LinkedList<>();
+        List<StringBuilder> importList = new LinkedList<>();
 
         for (TypeElement annotation : annotations) {
 
@@ -86,7 +89,9 @@ public class DTOProcessor extends AbstractProcessor {
                                 }
                                 catch (IndexOutOfBoundsException e) {
                                     fieldsList.add(new StringBuilder());
+                                    importList.add(new StringBuilder());
                                 }
+
 
                                 fieldsList.get(i).append("\t");
                                 for (Modifier mod : element.getModifiers()) {
@@ -111,6 +116,7 @@ public class DTOProcessor extends AbstractProcessor {
                                 }
                                 catch (IndexOutOfBoundsException e) {
                                     fieldsList.add(new StringBuilder());
+                                    importList.add(new StringBuilder());
                                 }
 
                                 fieldsList.get(i).append("\t");
@@ -118,7 +124,18 @@ public class DTOProcessor extends AbstractProcessor {
                                 for (Modifier mod : element.getModifiers()) {
                                     fieldsList.get(i).append(mod.toString());
                                 }
-                                String simpleType = element.asType().toString().substring(element.asType().toString().lastIndexOf(".") + 1);
+                            Pattern pattern = Pattern.compile("(?:\\w+\\.)+(\\w+)");
+                            Matcher matcher = pattern.matcher(element.asType().toString());
+
+                            String simpleType  = element.asType().toString();
+
+                            while(matcher.find()) {
+                                System.err.println("Whole String "+matcher.group(0)+" last one "+matcher.group(1));
+                                importList.get(i).append("import ").append(matcher.group(0)).append(";\n");
+                                simpleType = simpleType.replace(matcher.group(0),matcher.group(1));
+
+                            }
+
                                 fieldsList.get(i).append(" ").append(simpleType).append(" ").append(element.getSimpleName().toString());
                                 if (el.getConstantValue() != null) {
                                     fieldsList.get(i).append(" = ").append(el.getConstantValue());
@@ -143,7 +160,8 @@ public class DTOProcessor extends AbstractProcessor {
             try {
                 JavaFileObject fileObject = filer.createSourceFile("rabah.usthb." + nameDTOList.get(i)+nameClass+"DTO");
                 try (Writer writer = fileObject.openWriter()) {
-                    writer.write("package rabah.usthb;\n");
+                    writer.write("package rabah.usthb;\n\n");
+                    writer.write(importList.get(i).toString());
                     writer.write("public class " + nameDTOList.get(i)+nameClass+"DTO {\n");
                     writer.write(fieldsList.get(i).toString());
                     writer.write("}\n");
