@@ -7,8 +7,7 @@ import javax.lang.model.element.*;
 import java.io.IOException;
 import java.io.Writer;
 
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
 
@@ -30,8 +29,10 @@ public class DTOProcessor extends AbstractProcessor {
             return false;
         }
 
-        String nameDTO = "";
-        StringBuilder fields = new StringBuilder();
+        String nameClass = "";
+
+        List<String> nameDTOList = new LinkedList<>();
+        List<StringBuilder> fieldsList = new LinkedList<>();
 
         for (TypeElement annotation : annotations) {
 
@@ -40,13 +41,18 @@ public class DTOProcessor extends AbstractProcessor {
 
 
                 for (Element element : roundEnv.getElementsAnnotatedWith(annotation)) {
+                    nameClass = element.getSimpleName().toString();
                     System.err.println("Processing: " + element.getSimpleName());
 
                     for (AnnotationMirror mirror : element.getAnnotationMirrors()) {
                         for (Map.Entry<? extends javax.lang.model.element.ExecutableElement, ? extends javax.lang.model.element.AnnotationValue> entry : mirror.getElementValues().entrySet()) {
                             System.err.println("KEY " + entry.getKey().getSimpleName() + " VALUE : " + entry.getValue().getValue());
                             if (entry.getKey().getSimpleName().toString().equals("name")) {
-                                nameDTO = entry.getValue().getValue().toString();
+                                List<? extends AnnotationValue> list = (List<? extends AnnotationValue>)entry.getValue().getValue();
+                                String[] nameList = list.stream().map(v-> (String) v.getValue()).toArray(String[]::new);
+
+                                Collections.addAll(nameDTOList,nameList);
+
                             }
                         }
                     }
@@ -58,16 +64,74 @@ public class DTOProcessor extends AbstractProcessor {
                 for (Element element : roundEnv.getElementsAnnotatedWith(annotation)) {
                     System.err.println("Processing: " + element.getSimpleName());
                     VariableElement el = (VariableElement) element;
+                    List<String> excludedDTOList = new LinkedList<>();
 
-                    for (Modifier mod : element.getModifiers() ) {
-                        fields.append(mod.toString());
+
+                    for (AnnotationMirror mirror : element.getAnnotationMirrors()) {
+                        for (Map.Entry<? extends javax.lang.model.element.ExecutableElement, ? extends javax.lang.model.element.AnnotationValue> entry : mirror.getElementValues().entrySet()) {
+                            System.err.println("KEY " + entry.getKey().getSimpleName() + " VALUE : " + entry.getValue().getValue());
+                            if (entry.getKey().getSimpleName().toString().equals("excludedDTO")) {
+                                List<? extends AnnotationValue> list = (List<? extends AnnotationValue>)entry.getValue().getValue();
+                                String[] excludedDTO = list.stream().map(v-> (String) v.getValue()).toArray(String[]::new);
+                                Collections.addAll(excludedDTOList,excludedDTO);
+                            }
+                        }
                     }
-                    String simpleType = element.asType().toString().substring(element.asType().toString().lastIndexOf(".")+1);
-                    fields.append(" ").append(simpleType).append(" ").append(element.getSimpleName().toString());
-                    if(el.getConstantValue()!= null) {
-                        fields.append(" = ").append(el.getConstantValue());
+
+                    if (!excludedDTOList.isEmpty()) {
+                        for (int i = 0; i < nameDTOList.size(); i++) {
+                            if (!excludedDTOList.contains(nameDTOList.get(i))) {
+                                try {
+                                    fieldsList.get(i);
+                                }
+                                catch (IndexOutOfBoundsException e) {
+                                    fieldsList.add(new StringBuilder());
+                                }
+
+                                fieldsList.get(i).append("\t");
+                                for (Modifier mod : element.getModifiers()) {
+                                    fieldsList.get(i).append(mod.toString());
+                                }
+                                String simpleType = element.asType().toString().substring(element.asType().toString().lastIndexOf(".") + 1);
+                                fieldsList.get(i).append(" ").append(simpleType).append(" ").append(element.getSimpleName().toString());
+                                if (el.getConstantValue() != null) {
+                                    fieldsList.get(i).append(" = ").append(el.getConstantValue());
+                                }
+                                fieldsList.get(i).append(";\n");
+
+                            }
+
+                        }
                     }
-                    fields.append(";\n");
+                    else {
+                        for (int i = 0; i < nameDTOList.size(); i++) {
+
+                                try {
+                                    fieldsList.get(i);
+                                }
+                                catch (IndexOutOfBoundsException e) {
+                                    fieldsList.add(new StringBuilder());
+                                }
+
+                                fieldsList.get(i).append("\t");
+
+                                for (Modifier mod : element.getModifiers()) {
+                                    fieldsList.get(i).append(mod.toString());
+                                }
+                                String simpleType = element.asType().toString().substring(element.asType().toString().lastIndexOf(".") + 1);
+                                fieldsList.get(i).append(" ").append(simpleType).append(" ").append(element.getSimpleName().toString());
+                                if (el.getConstantValue() != null) {
+                                    fieldsList.get(i).append(" = ").append(el.getConstantValue());
+                                }
+                                fieldsList.get(i).append(";\n");
+
+                            }
+
+
+                    }
+
+
+
 
 
                 }
@@ -75,18 +139,20 @@ public class DTOProcessor extends AbstractProcessor {
 
         }
         Filer filer = processingEnv.getFiler();
-        try {
-            JavaFileObject fileObject = filer.createSourceFile("rabah.usthb." + nameDTO);
-            try (Writer writer = fileObject.openWriter()) {
-                writer.write("package rabah.usthb;\n");
-                writer.write("public class " + nameDTO + " {\n");
-                writer.write(fields.toString());
-                writer.write("}\n");
+        for (int i = 0; i<nameDTOList.size();i++) {
+            try {
+                JavaFileObject fileObject = filer.createSourceFile("rabah.usthb." + nameDTOList.get(i)+nameClass+"DTO");
+                try (Writer writer = fileObject.openWriter()) {
+                    writer.write("package rabah.usthb;\n");
+                    writer.write("public class " + nameDTOList.get(i)+nameClass+"DTO {\n");
+                    writer.write(fieldsList.get(i).toString());
+                    writer.write("}\n");
 
+                }
             }
-        }
-        catch (IOException e) {
-            processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "Failed to generate class: " + e.getMessage());
+            catch (IOException e) {
+                processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "Failed to generate class: " + e.getMessage());
+            }
         }
 
 
