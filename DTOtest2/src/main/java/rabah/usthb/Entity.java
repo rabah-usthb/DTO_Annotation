@@ -12,8 +12,10 @@ public class Entity {
     @DTOField
     private String name = "";
 
+    private int age;
+
     @DTOField
-    private Map<String,Integer> tags = new HashMap<>();
+    private Map<String, Integer> tags = new HashMap<>();
 
     @DTOField(excludedDTO = {"get"})
     private String password;
