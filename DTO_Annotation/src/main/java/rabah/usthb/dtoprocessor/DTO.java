@@ -8,5 +8,6 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.SOURCE)
 @Target(ElementType.TYPE)
 public @interface DTO {
-    String[] name();
+    String[] name() default {""};
+    boolean lombok() default false;
 }
