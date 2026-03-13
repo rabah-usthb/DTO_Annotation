@@ -3,6 +3,7 @@ package rabah.usthb.dtoprocessor;
 import com.google.auto.service.AutoService;
 import com.sun.source.tree.*;
 import com.sun.source.util.TreePath;
+import com.sun.source.util.TreeScanner;
 import com.sun.source.util.Trees;
 import javax.annotation.processing.*;
 import javax.lang.model.element.*;
@@ -53,16 +54,14 @@ public class DTOProcessor extends AbstractProcessor {
         for(Element rootElements :roundEnv.getRootElements()) {
             TypeElement rootElement = (TypeElement) rootElements;
 
-            readAST(roundEnv, rootElement);
+            this.generateEntity = false;
+            readAST(rootElement);
             this.importEntity = new StringBuilder();
             this.fieldsEntity = new StringBuilder();
             this.nameDTOList.clear();
             this.importListDTO.clear();
             this.fieldsListDTO.clear();
             this.lombok = false;
-
-            this.generateEntity = false;
-
 
 
             for (AnnotationTree annot : this.AST.getModifiers().getAnnotations()) {
@@ -87,14 +86,13 @@ public class DTOProcessor extends AbstractProcessor {
                 if (tr instanceof VariableTree var) {
                     System.err.println("VAR " + var.getModifiers().getFlags() + " " + var.getType() + " " + var.getName() + " = " + var.getInitializer());
                     List<? extends com.sun.source.tree.AnnotationTree> listAnnot = var.getModifiers().getAnnotations();
+
                     if (generateEntity && listAnnot.isEmpty())
                         populateImportAndField(var);
 
                     for (AnnotationTree anot : listAnnot) {
                         List<String> excludedDTO = new LinkedList<>();
                         if (anot.toString().trim().startsWith("@DTOField") || anot.toString().trim().startsWith("@DTOExtraField")) {
-                            if(anot.toString().trim().startsWith(("@DTOExtraField")))
-                                this.generateEntity = true;
                             for (ExpressionTree arg : anot.getArguments()) {
                                 AssignmentTree assignment = (AssignmentTree) arg;
                                 ExpressionTree value = assignment.getExpression();
@@ -112,8 +110,27 @@ public class DTOProcessor extends AbstractProcessor {
                             this.populateImportAndFieldList(var, excludedDTO);
 
                         } else {
-                            if (generateEntity)
+                            if (generateEntity) {
+                                TreePath annotPath = new TreePath(this.classPath, anot);
+                                TypeElement element = (TypeElement) trees.getElement(annotPath);
+
+                                VariableElement ve = (VariableElement) trees.getElement(new TreePath(this.classPath, var));
+
+                                for (AnnotationMirror mirror : ve.getAnnotationMirrors()) {
+                                    if (mirror.getAnnotationType().asElement().equals(element)) {
+                                       for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry : mirror.getElementValues().entrySet()) {
+                                           System.err.println("KEY " + entry.getKey().getSimpleName() + " VALUE : " + entry.getValue().getValue());
+                                           if(entry.getValue().getValue() instanceof VariableElement) {
+                                               importEntity.append("import ").append(((VariableElement) entry.getValue().getValue()).asType()).append(";\n");
+                                           }
+                                       }
+                                        break;
+                                    }
+                                }
+
+                                importEntity.append("import ").append(element).append(";\n");
                                 fieldsEntity.append("\t").append(anot).append("\n");
+                            }
                         }
 
                     }
@@ -123,11 +140,6 @@ public class DTOProcessor extends AbstractProcessor {
 
             }
 
-            for (ImportTree imp : classPath.getCompilationUnit().getImports()) {
-                if (!this.importEntity.toString().contains(imp.toString())) {
-                    this.importEntity.append(imp);
-                }
-            }
 
             generateFiles();
         }
@@ -242,7 +254,8 @@ public class DTOProcessor extends AbstractProcessor {
 
     }
 
-    private void populateImportAndField(VariableTree var) {
+
+        private void populateImportAndField(VariableTree var) {
         TreePath varPath = new TreePath(this.classPath,var);
         Element element = trees.getElement(varPath);
         TypeMirror mirror = null;
@@ -289,13 +302,24 @@ public class DTOProcessor extends AbstractProcessor {
     }
 
 
-    private void readAST(RoundEnvironment roundEnv, TypeElement rootElement) {
+    private void readAST(TypeElement rootElement) {
         this.trees = Trees.instance(processingEnv);
         this.nameClass = rootElement.getSimpleName().toString();
         System.err.println("ELEMENT " + rootElement.getSimpleName());
         this.classPath = trees.getPath(rootElement);
         System.err.println("ANNNOOOOOOT "+Arrays.toString(this.classPath.getCompilationUnit().getClass().getAnnotations()));
         this.AST = trees.getTree(rootElement);
+        CompilationUnitTree cu = this.classPath.getCompilationUnit();
+
+        new TreeScanner<Void, Void>() {
+            @Override
+            public Void visitAnnotation(AnnotationTree node, Void p) {
+                if(node.toString().trim().startsWith("@DTOExtraField")) {
+                    generateEntity = true;
+                }
+                return super.visitAnnotation(node, p);
+            }
+        }.scan(cu, null);
 
     }
 }
