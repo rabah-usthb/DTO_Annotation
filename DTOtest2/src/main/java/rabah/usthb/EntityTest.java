@@ -1,8 +1,6 @@
 package rabah.usthb;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
+import jakarta.persistence.*;
 import org.springframework.data.annotation.Id;
 import rabah.usthb.dtoprocessor.DTO;
 import rabah.usthb.dtoprocessor.DTOExtraField;
@@ -11,8 +9,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 
-@DTO(name = {"post","get"})
-public class Entity {
+@Entity
+@Inheritance(strategy = InheritanceType.JOINED)
+@DTO(name = {"get", "post"})
+public class EntityTest {
     @Id
     @GeneratedValue(strategy= GenerationType.AUTO)
     private long id;

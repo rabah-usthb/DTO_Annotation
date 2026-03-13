@@ -4,6 +4,7 @@ import jakarta.persistence.Entity;
 import rabah.usthb.dtoprocessor.DTO;
 import rabah.usthb.dtoprocessor.DTOField;
 
+
 @Entity
 @DTO
 public class Bazz {
