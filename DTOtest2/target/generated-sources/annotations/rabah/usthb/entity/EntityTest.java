@@ -1,5 +1,8 @@
 package rabah.usthb.entity;
 
+import jakarta.persistence.Entity;
+import jakarta.persistence.Inheritance;
+import jakarta.persistence.InheritanceType;
 import org.springframework.data.annotation.Id;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.GeneratedValue;
@@ -7,7 +10,10 @@ import jakarta.persistence.Column;
 import java.util.Map;
 import java.util.HashMap;
 
-public class Entity {
+
+@Entity
+@Inheritance(strategy = InheritanceType.JOINED)
+public class EntityTest {
 	@Id
 	@GeneratedValue(strategy = GenerationType.AUTO)
 	private long id;
@@ -15,7 +21,6 @@ public class Entity {
 	private String surname;
 	private String haah;
 	private String name = "";
-	private String fullName;
 	private int age;
 	private Map<String, Integer> tags = new HashMap<>();
 	private Map<String, Integer> tag = new HashMap<>();
