@@ -1,18 +1,20 @@
 package rabah.usthb.entity;
 
-import java.util.Map;
-import java.util.HashMap;
-import jakarta.persistence.Column;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import org.springframework.data.annotation.Id;
-import rabah.usthb.dtoprocessor.DTO;
-import rabah.usthb.dtoprocessor.DTOExtraField;
-import rabah.usthb.dtoprocessor.DTOField;
-import java.util.HashMap;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.Column;
 import java.util.Map;
+import java.util.HashMap;
 
 public class Entity {
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id;
+	@Column(nullable = true)
+	private String surname;
+	private String haah;
+	private String name = "";
 	private String fullName;
 	private int age;
 	private Map<String, Integer> tags = new HashMap<>();
