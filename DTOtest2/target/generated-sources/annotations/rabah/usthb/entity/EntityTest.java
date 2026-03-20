@@ -3,20 +3,14 @@ package rabah.usthb.entity;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Inheritance;
 import jakarta.persistence.InheritanceType;
-import org.springframework.data.annotation.Id;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Column;
 import java.util.Map;
 import java.util.HashMap;
 
 
-@Entity
-@Inheritance(strategy = InheritanceType.JOINED)
+	@Entity
+	@Inheritance(strategy = InheritanceType.JOINED)
 public class EntityTest {
-	@Id
-	@GeneratedValue(strategy = GenerationType.AUTO)
-	private long id;
 	@Column(nullable = true)
 	private String surname;
 	private String haah;

@@ -37,13 +37,17 @@ public class DTOProcessor extends AbstractProcessor {
 
     Trees trees;
 
-    private final String dtoAnnotationName = "rabah.usthb.dtoprocessor.DTO";
-    private final String dtoFieldAnnotationName = "rabah.usthb.dtoprocessor.DTOField";
-    private final String dtoExtraFieldAnnotationName = "rabah.usthb.dtoprocessor.DTOExtraField";
+    private final String dtoAnnotationName = DTO.class.getCanonicalName();
+
+    private final String dtoFieldAnnotationName = DTOField.class.getCanonicalName();
+    private final String dtoExtraFieldAnnotationName = DTOExtraField.class.getCanonicalName();
 
     boolean generateEntity;
 
     private StringBuilder annotationEntity = new StringBuilder();
+
+    Pattern pattern = Pattern.compile("(?:\\w+\\.)+\\w+");
+
 
     @Override
     public synchronized void init(ProcessingEnvironment processingEnv) {
@@ -53,14 +57,25 @@ public class DTOProcessor extends AbstractProcessor {
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
 
-        if(doesAnnotationHaveDTO(annotations))
+        if(doesAnnotationNotHaveDTO(annotations) || roundEnv.processingOver())
             return false;
 
-        for(Element el :roundEnv.getRootElements()) {
+
+        for(Element el : roundEnv.getElementsAnnotatedWith(DTO.class)) {
             TypeElement rootElement = (TypeElement) el;
 
-            if(doesClassHaveDTO(rootElement))
+            if(!rootElement.getKind().equals(ElementKind.CLASS))
                 continue;
+
+
+            System.err.println("TYPE "+rootElement.asType());
+            System.err.println("QUALIFIED NAME "+rootElement.getQualifiedName());
+            System.err.println("PACKAGE NAME "+rootElement.getEnclosingElement());
+
+
+            for (Element element : rootElement.getEnclosedElements()) {
+                System.err.println("Element ENCLOSED "+element);
+            }
 
             initState(rootElement);
 
@@ -79,6 +94,7 @@ public class DTOProcessor extends AbstractProcessor {
 
     private void generateFiles() {
 
+        System.err.println("LISTs STRING "+this.nameDTOList+" is empty "+this.nameDTOList.isEmpty() + "size "+this.nameDTOList.size());
         Filer filer = this.processingEnv.getFiler();
         for (int i = 0; i < this.nameDTOList.size(); i++) {
             try {
@@ -124,16 +140,8 @@ public class DTOProcessor extends AbstractProcessor {
     private void populateImportAndFieldList(VariableTree var, List<String> excludedDTOList) {
         TreePath varPath = new TreePath(this.classPath,var);
         Element element = trees.getElement(varPath);
-        TypeMirror mirror = null;
+        TypeMirror initTypeMirror = resolveInitType(var);
 
-
-        if(var.getInitializer() instanceof NewClassTree) {
-            TreePath path = TreePath.getPath(varPath, var.getInitializer());
-            Element el = trees.getElement(path);
-            mirror = trees.getTypeMirror(path);
-            System.err.println("TYPE OF MIRRer2 "+mirror);
-
-        }
 
         for (int i = 0; i < nameDTOList.size(); i++) {
             if (!excludedDTOList.contains(nameDTOList.get(i))) {
@@ -145,89 +153,81 @@ public class DTOProcessor extends AbstractProcessor {
                     this.importDTOList.add(new StringBuilder());
                 }
 
-                StringBuilder strFields = this.fieldDTOList.get(i);
-                extractSimpleType(element.asType().toString(), i);
-                if(mirror!=null) {
-                    extractSimpleType(mirror.toString(),i);
+
+                extractSimpleType(element.asType().toString(), this.importDTOList.get(i));
+                if(initTypeMirror!=null) {
+                    extractSimpleType(initTypeMirror.toString(),this.importDTOList.get(i));
                 }
 
-
-                strFields.append("\t");
-
-                for (Modifier mod : var.getModifiers().getFlags()) {
-                    strFields.append(mod.toString()).append(" ");
-                }
-
-                strFields.append(var.getType()).append(" ").append(var.getName());
-
-                if (var.getInitializer() != null) {
-                    strFields.append(" = ").append(var.getInitializer());
-                }
-                strFields.append(";\n");
-
+                StringBuilder field = this.fieldDTOList.get(i);
+                appendField(var,field);
             }
 
         }
     }
 
-    private void extractSimpleType(String type, int i) {
-        Pattern pattern = Pattern.compile("(?:\\w+\\.)+\\w+");
-        Matcher matcher = pattern.matcher(type);
-
-        while (matcher.find()) {
-            if(!matcher.group(0).startsWith("java.lang") && this.importDTOList.get(i).indexOf(matcher.group(0))==-1) {
-                this.importDTOList.get(i).append("import ").append(matcher.group(0)).append(";\n");
-            }
-
-        }
-
-    }
-
-
-        private void populateImportAndField(VariableTree var) {
+    private TypeMirror resolveInitType(VariableTree var) {
         TreePath varPath = new TreePath(this.classPath,var);
-        Element element = trees.getElement(varPath);
-        TypeMirror mirror = null;
+        TypeMirror initTypeMirror = null;
 
 
         if(var.getInitializer() instanceof NewClassTree) {
-            TreePath path = TreePath.getPath(varPath, var.getInitializer());
-            Element el = trees.getElement(path);
-            mirror = trees.getTypeMirror(path);
-            System.err.println("TYPE OF MIRRer2 "+mirror);
+            TreePath initPath = new TreePath(varPath, var.getInitializer());
+
+            Element initEL = trees.getElement(initPath);
+
+            initTypeMirror = trees.getTypeMirror(initPath);
+
+            System.err.println("TYPE OF MIRRer1111 "+initTypeMirror);
 
         }
+        return initTypeMirror;
+    }
 
-        extractSimpleType(element.asType().toString());
-        if(mirror!=null) {
-            extractSimpleType(mirror.toString());
+
+
+    private void populateImportAndField(VariableTree var) {
+        TreePath varPath = new TreePath(this.classPath,var);
+        Element element = trees.getElement(varPath);
+        TypeMirror initTypeMirror = resolveInitType(var);
+
+
+        extractSimpleType(element.asType().toString(),this.importEntity);
+        if(initTypeMirror!=null) {
+            extractSimpleType(initTypeMirror.toString(),this.importEntity);
         }
-        fieldEntity.append("\t");
+        appendField(var,fieldEntity);
+    }
 
-        for (Modifier mod : var.getModifiers().getFlags()) {
-            fieldEntity.append(mod.toString()).append(" ");
+    private void appendField(VariableTree variableTree,StringBuilder fieldBuilder) {
+        fieldBuilder.append("\t");
+
+        for (Modifier mod : variableTree.getModifiers().getFlags()) {
+            fieldBuilder.append(mod.toString()).append(" ");
         }
 
-        fieldEntity.append(var.getType()).append(" ").append(var.getName());
+        fieldBuilder.append(variableTree.getType()).append(" ").append(variableTree.getName());
 
-        if (var.getInitializer() != null) {
-            fieldEntity.append(" = ").append(var.getInitializer());
+        if (variableTree.getInitializer() != null) {
+            fieldBuilder.append(" = ").append(variableTree.getInitializer());
         }
-        fieldEntity.append(";\n");
+        fieldBuilder.append(";\n");
+    }
+
+    private void extractSimpleType(String type, StringBuilder importBuilder) {
+
+        Matcher matcher = this.pattern.matcher(type);
+
+        while (matcher.find()) {
+            appendImport(matcher.group(0),importBuilder);
+        }
 
     }
 
-    private void extractSimpleType(String type) {
-        Pattern pattern = Pattern.compile("(?:\\w+\\.)+\\w+");
-        Matcher matcher = pattern.matcher(type);
-
-        while (matcher.find()) {
-            if(!matcher.group(0).startsWith("java.lang") && this.importEntity.indexOf(matcher.group(0))==-1) {
-                this.importEntity.append("import ").append(matcher.group(0)).append(";\n");
-            }
-
+    private void appendImport(String value , StringBuilder importBuilder) {
+        if(!value.startsWith("java.lang") && importBuilder.indexOf(value)==-1) {
+            importBuilder.append("import ").append(value).append(";\n");
         }
-
     }
 
 
@@ -236,33 +236,27 @@ public class DTOProcessor extends AbstractProcessor {
         this.nameClass = rootElement.getSimpleName().toString();
         this.classPath = trees.getPath(rootElement);
         this.AST = trees.getTree(rootElement);
-        CompilationUnitTree cu = this.classPath.getCompilationUnit();
 
-        new TreeScanner<Void, Void>() {
-            @Override
-            public Void visitAnnotation(AnnotationTree node, Void p) {
-                if(node.toString().trim().startsWith("@DTOExtraField")) {
-                    generateEntity = true;
+        for (Element element : rootElement.getEnclosedElements()) {
+            if(element instanceof VariableElement var) {
+                if(var.getAnnotation(DTOExtraField.class)!=null) {
+                    this.generateEntity = true;
+                    break;
                 }
-                return super.visitAnnotation(node, p);
             }
-        }.scan(cu, null);
+        }
 
 
     }
 
-    private boolean doesAnnotationHaveDTO(Set<? extends TypeElement> annotations){
+    private boolean doesAnnotationNotHaveDTO(Set<? extends TypeElement> annotations){
         return (annotations.isEmpty() || annotations.stream().noneMatch(e-> e.toString().equals(dtoAnnotationName)));
     }
 
 
-    private boolean doesClassHaveDTO(TypeElement rootElement) {
-        return rootElement.getAnnotationMirrors().stream().noneMatch(e-> e.getAnnotationType().toString().equals(dtoAnnotationName));
-    }
-
     private void initState(TypeElement rootElement) {
         this.generateEntity = false;
-        readAST(rootElement);
+        this.readAST(rootElement);
         this.importEntity = new StringBuilder();
         this.fieldEntity = new StringBuilder();
         this.annotationEntity = new StringBuilder();
@@ -275,20 +269,15 @@ public class DTOProcessor extends AbstractProcessor {
 
     private void resolveClassAnnotation(TypeElement rootElement) {
         for(AnnotationMirror annot : rootElement.getAnnotationMirrors()) {
-
             if (annot.getAnnotationType().toString().equals(dtoAnnotationName)) {
+
+                System.err.println("EQUALS HAHA  "+  annot.getAnnotationType().asElement());
                 for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry : annot.getElementValues().entrySet()) {
 
                     String nameProperty = entry.getKey().getSimpleName().toString();
                     switch (nameProperty) {
                         case "name" :
-                            if (entry.getValue().getValue() instanceof List<?>) {
-                                List<? extends AnnotationValue> list = (List<? extends AnnotationValue>) entry.getValue().getValue();
-                                for (AnnotationValue val : list) {
-                                    this.nameDTOList.add((String) val.getValue());
-                                }
-
-                            }
+                            appendArrayValue(entry.getValue(),this.nameDTOList);
                             break;
 
                         case "lombok" :
@@ -301,19 +290,20 @@ public class DTOProcessor extends AbstractProcessor {
             }
             else if (generateEntity){
 
-                this.importEntity.append("import ").append(annot.getAnnotationType()).append(";\n");
-                this.annotationEntity.append(trees.getTree(rootElement,annot)).append("\n");
+                this.appendImport(annot.getAnnotationType().toString(),this.importEntity);
+                this.appendAnnotation(rootElement,annot,this.annotationEntity);
                 for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry : annot.getElementValues().entrySet()) {
-                    if(entry.getValue().getValue() instanceof VariableElement var) {
-                        this.importEntity.append("import ").append(var.asType()).append(";\n");
+                    if(entry.getValue().getValue() instanceof VariableElement varValue) {
+                        this.appendImport(varValue.asType().toString(),this.importEntity);
                     }
                 }
 
             }
         }
 
+
         if(this.nameDTOList.isEmpty()) {
-            this.nameDTOList.add("");
+            this.nameDTOList.add(" ");
         }
 
     }
@@ -328,48 +318,60 @@ public class DTOProcessor extends AbstractProcessor {
 
                 if (generateEntity && listAnnot.isEmpty())
                     populateImportAndField(var);
-                boolean b = false;
-                for (AnnotationMirror anot : listAnnot) {
-                    List<String> excludedDTO = new LinkedList<>();
-                    if (anot.getAnnotationType().toString().equals(dtoFieldAnnotationName) || anot.getAnnotationType().toString().equals(dtoExtraFieldAnnotationName)) {
-                        b = anot.getAnnotationType().toString().equals(dtoExtraFieldAnnotationName);
-                        for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry : anot.getElementValues().entrySet()) {
-                            if(entry.getValue().getValue() instanceof List<?>) {
-                                List<? extends AnnotationValue> list = (List<? extends AnnotationValue>) entry.getValue().getValue();
-                                for (AnnotationValue val : list) {
-                                    excludedDTO.add((String) val.getValue());
-                                }
 
-                            }
+                boolean isExtra = varElement.getAnnotation(DTOExtraField.class)!=null;
+                for (AnnotationMirror annot : listAnnot) {
+                    List<String> excludedDTO = new LinkedList<>();
+                    System.err.println("ANNOTes "+annot.getAnnotationType().toString());
+                    if (annot.getAnnotationType().toString().equals(dtoFieldAnnotationName) || annot.getAnnotationType().toString().equals(dtoExtraFieldAnnotationName)) {
+
+                        for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry : annot.getElementValues().entrySet()) {
+                            this.appendArrayValue(entry.getValue(),excludedDTO);
                         }
 
                         System.err.println("EXCLUDED " + excludedDTO);
                         this.populateImportAndFieldList(var, excludedDTO);
 
-                    } else if (generateEntity) {
+                    } else if (generateEntity && !isExtra) {
 
-                        for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry : anot.getElementValues().entrySet()) {
+                        for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry : annot.getElementValues().entrySet()) {
                             System.err.println("KEY " + entry.getKey().getSimpleName() + " VALUE : " + entry.getValue().getValue());
-                                if(entry.getValue().getValue() instanceof VariableElement) {
-                                    importEntity.append("import ").append(((VariableElement) entry.getValue().getValue()).asType()).append(";\n");
+                                if(entry.getValue().getValue() instanceof VariableElement varValue) {
+                                    this.appendImport(varValue.asType().toString(),this.importEntity);
                                 }
                         }
 
-                        importEntity.append("import ").append(anot.getAnnotationType()).append(";\n");
-                        System.err.println("TREESSSS "+trees.getTree(varElement,anot));
-                        fieldEntity.append("\t").append(trees.getTree(varElement,anot)).append("\n");
 
+                        this.appendImport(annot.getAnnotationType().toString(),this.importEntity);
+                        System.err.println("TREESSSS "+trees.getTree(varElement,annot));
+                        this.appendAnnotation(varElement,annot,this.fieldEntity);
 
                     }
 
                 }
-                if(generateEntity && !b && !listAnnot.isEmpty())
+                if(generateEntity && !isExtra && !listAnnot.isEmpty())
                     populateImportAndField(var);
             }
+
+
 
         }
 
 
+    }
+
+    private void appendAnnotation (Element element,AnnotationMirror annot,StringBuilder annotationBuilder) {
+        annotationBuilder.append("\t").append(trees.getTree(element,annot)).append("\n");
+    }
+
+    private void appendArrayValue(AnnotationValue value , List<String> list) {
+        if(value.getValue() instanceof List<?>) {
+            List<? extends AnnotationValue> annotationValuesList = (List<? extends AnnotationValue>) value.getValue();
+            for (AnnotationValue val : annotationValuesList) {
+                list.add((String) val.getValue());
+            }
+
+        }
     }
 
 

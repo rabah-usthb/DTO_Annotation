@@ -13,6 +13,7 @@ import java.util.Map;
 @Inheritance(strategy = InheritanceType.JOINED)
 @DTO(name = {"get", "post"})
 public class EntityTest {
+    @DTOExtraField
     @Id
     @GeneratedValue(strategy= GenerationType.AUTO)
     private long id;
@@ -25,7 +26,9 @@ public class EntityTest {
     @DTOField
     private String name = "";
 
+    @Column
     @DTOExtraField(excludedDTO = {"post"})
+    @Id
     private String fullName;
 
     private int age;
@@ -41,7 +44,9 @@ public class EntityTest {
     private String password;
 
     public void setId(long id) {
-        int test;
+        int nigga;
         this.id = id;
     }
 }
+
+
