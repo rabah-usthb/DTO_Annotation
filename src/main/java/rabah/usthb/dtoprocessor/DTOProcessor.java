@@ -1,9 +1,10 @@
-package rabah.usthb.dtoprocessor;
+package io.github.rabah.usthb;
 
 import com.google.auto.service.AutoService;
 import com.sun.source.tree.*;
 import com.sun.source.util.TreePath;
 import com.sun.source.util.Trees;
+
 import javax.annotation.processing.*;
 import javax.lang.model.element.*;
 import java.io.IOException;
@@ -19,7 +20,7 @@ import javax.tools.JavaFileObject;
  * @author rabah-usthb
  */
 @AutoService(Processor.class)
-@javax.annotation.processing.SupportedAnnotationTypes({"rabah.usthb.dtoprocessor.DTO" , "rabah.usthb.dtoprocessor.DTOField", "rabah.usthb.dtoprocessor.DTOExtraField" })
+@javax.annotation.processing.SupportedAnnotationTypes({"io.github.rabah.usthb.DTO" , "io.github.rabah.usthb.DTOField", "io.github.rabah.usthb.DTOExtraField" })
 @javax.annotation.processing.SupportedSourceVersion(javax.lang.model.SourceVersion.RELEASE_17)
 public class DTOProcessor extends AbstractProcessor {
 
@@ -99,7 +100,7 @@ public class DTOProcessor extends AbstractProcessor {
 
     /**
      * Canonical name of the {@link DTOField} annotation
-     *<br/>&nbsp;&nbsp; To check type if the annotation mirror is a {@link rabah.usthb.dtoprocessor.DTOField} in {@link #resolveFields()}
+     *<br/>&nbsp;&nbsp; To check type if the annotation mirror is a {@link DTOField} in {@link #resolveFields()}
      */
     private final String dtoFieldAnnotationName = DTOField.class.getCanonicalName();
 

@@ -4,17 +4,18 @@
 
     <groupId>io.github.rabah-usthb</groupId>
     <artifactId>DTO_Annotation</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
     <packaging>jar</packaging>
 
     <name>DTO_Annotation</name>
     <description>Annotation processor for generating DTOs from entity classes at compile time</description>
     <url>https://github.com/rabah-usthb/DTO_Annotation</url>
 
+
     <licenses>
         <license>
             <name>The Apache License, Version 2.0</name>
-            <url>https://github.com/rabah-usthb/DTO_Annotation/blob/master/LICENSE</url>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
         </license>
     </licenses>
 
@@ -36,8 +37,8 @@
 
     <scm>
         <connection>scm:git:git://github.com/rabah-usthb/DTO_Annotation.git</connection>
-        <developerConnection>scm:git:ssh://github.com/rabah-usthb/DTO_Annotation.git</developerConnection>
-        <url>https://github.com/rabah-usthb/DTO_Annotation</url>
+        <developerConnection>scm:git:ssh://github.com:rabah-usthb/DTO_Annotation.git</developerConnection>
+        <url>https://github.com/rabah-usthb/DTO_Annotation/tree/master</url>
     </scm>
 
     <properties>
@@ -109,6 +110,16 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.sonatype.central</groupId>
+                <artifactId>central-publishing-maven-plugin</artifactId>
+                <version>0.9.0</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <publishingServerId>central</publishingServerId>
+                </configuration>
             </plugin>
         </plugins>
     </build>
