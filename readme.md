@@ -193,7 +193,7 @@ For Maven-based projects, add the following to your POM file in order to use DTO
         <dependency>
             <groupId>io.github.rabah-usthb</groupId>
             <artifactId>DTO_Annotation</artifactId>
-            <version>1.0.0</version>
+            <version>1.0.1</version>
         </dependency>
     </dependencies>
 ```
@@ -204,7 +204,7 @@ For Gradle, you need something along the following lines:
 
 ```groovy
 dependencies {
-    implementation 'io.github.rabah-usthb:DTO_Annotation:1.0.0'
+    implementation 'io.github.rabah-usthb:DTO_Annotation:1.0.1'
 }
 ```
 
