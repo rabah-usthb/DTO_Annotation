@@ -32,11 +32,14 @@ import io.github.rabah.usthb.DTO;
 import io.github.rabah.usthb.DTOField;
 import java.util.HashMap;
 import java.util.Map;
-
+import lombok.Data;
+import lombok.Value;
 
 @Entity
 @Inheritance(strategy = InheritanceType.JOINED)
-@DTO(name = {"get", "post"})
+@DTO(name = {"get", "post"}, packageName="io.rabah")
+@Data
+@Value
 public class EntityTest {
 
     @Id
@@ -56,15 +59,18 @@ public class EntityTest {
 
 }
 ```
-DTO_Annotation will generate two DTOs (get, post) from EntityTest , fields that are annotated with `@DTOField`  are included in the DTOs unless they are excluded with `excludedDTO` array, the output will be :
+DTO_Annotation will generate two DTOs (get, post) from EntityTest , fields that are annotated with `@DTOField`  are included in the DTOs unless they are excluded with `excludedDTO` array, and all annotation present below `@DTO` will be included in the DTOs in this case they are `@Data` and `@Value`, all generated DTOs will go the package "io.rabah.dto" : 
 
 ``` java
-package rabah.usthb;
+package io.rabah.dto;
 
 import java.util.HashMap;
 import java.util.Map;
+import lombok.Data;
+import lombok.Value;
 
-
+@Data
+@Value
 public class getEntityTestDTO {
 
     private String name;
@@ -74,12 +80,15 @@ public class getEntityTestDTO {
 ```
 
 ``` java
-package rabah.usthb;
+package io.rabah.dto;
 
 import java.util.HashMap;
 import java.util.Map;
+import lombok.Data;
+import lombok.Value;
 
-
+@Data
+@Value
 public class postEntityTestDTO {
 
     private String name;
@@ -134,7 +143,7 @@ public class EntityTest {
 DTO_Annotation will generate one DTO that has full name as its extra field, and an entity that doesn't have full name :
 
 ``` java
-package rabah.usthb;
+package rabah.usthb.dto;
 
 import jakarta.persistence.*;
 import org.springframework.data.annotation.Id;
@@ -167,7 +176,7 @@ public class EntityTest {
 
 
 ``` java
-package rabah.usthb;
+package rabah.usthb.dto;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -192,7 +201,7 @@ For Maven-based projects, add the following to your POM file in order to use DTO
         <dependency>
             <groupId>io.github.rabah-usthb</groupId>
             <artifactId>DTO_Annotation</artifactId>
-            <version>1.0.1</version>
+            <version>1.1.0</version>
         </dependency>
     </dependencies>
 ```
@@ -203,7 +212,7 @@ For Gradle, you need something along the following lines:
 
 ```groovy
 dependencies {
-    implementation 'io.github.rabah-usthb:DTO_Annotation:1.0.1'
+    implementation 'io.github.rabah-usthb:DTO_Annotation:1.1.0'
 }
 ```
 
