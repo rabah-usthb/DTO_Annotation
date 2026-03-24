@@ -143,7 +143,7 @@ public class EntityTest {
 DTO_Annotation will generate one DTO that has full name as its extra field, and an entity that doesn't have full name :
 
 ``` java
-package rabah.usthb.dto;
+package rabah.usthb.entity;
 
 import jakarta.persistence.*;
 import org.springframework.data.annotation.Id;
