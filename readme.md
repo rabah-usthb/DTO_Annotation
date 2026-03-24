@@ -15,7 +15,6 @@
 ## What is DTO_Annotation?
 
 DTO_Annotation is a Java [annotation processor](https://docs.oracle.com/en/java/javase/21/docs/specs/man/javac.html#annotation-processing) designed to generate DTOs classes at compile time from entity classes to avoid manually creating them.
-*Easily debuggable mapping code** (or editable by hand—e.g. in case of a bug in the generator)
 
 
 ## Examples
