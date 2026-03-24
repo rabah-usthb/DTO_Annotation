@@ -8,8 +8,8 @@ import java.util.Map;
 import java.util.HashMap;
 
 
-	@Entity
-	@Inheritance(strategy = InheritanceType.JOINED)
+@Entity
+@Inheritance(strategy = InheritanceType.JOINED)
 public class EntityTest {
 	@Column(nullable = true)
 	private String surname;

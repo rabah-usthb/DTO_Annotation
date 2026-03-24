@@ -2,9 +2,9 @@ package rabah.usthb;
 
 import jakarta.persistence.*;
 import org.springframework.data.annotation.Id;
-import rabah.usthb.dtoprocessor.DTO;
-import rabah.usthb.dtoprocessor.DTOExtraField;
-import rabah.usthb.dtoprocessor.DTOField;
+import io.github.rabah.usthb.DTO;
+import io.github.rabah.usthb.DTOExtraField;
+import io.github.rabah.usthb.DTOField;
 import java.util.HashMap;
 import java.util.Map;
 

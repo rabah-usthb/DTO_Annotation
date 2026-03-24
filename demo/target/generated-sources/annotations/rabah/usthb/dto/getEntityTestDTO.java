@@ -1,4 +1,4 @@
-package rabah.usthb.dto;
+package rabah.usthb.dto ;
 
 import java.util.Map;
 import java.util.HashMap;

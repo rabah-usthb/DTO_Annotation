@@ -1,4 +1,4 @@
-package rabah.usthb.dtoprocessor;
+package io.github.rabah.usthb;
 
 import java.lang.annotation.*;
 

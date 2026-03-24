@@ -72,11 +72,11 @@ public class DTOProcessor extends AbstractProcessor {
     private String nameClass = "";
 
     /**
-     * Whether to generate lombok annotations for the DTOs, retrieved from {@link DTO#lombok()}.
-     *<br/>&nbsp;&nbsp; It's reset to false by {@link #initState(TypeElement)}
-     *<br/>&nbsp;&nbsp; It's updated by {@link #resolveClassAnnotation(TypeElement)}
+     * name of the package of the class that is processed.
+     *<br/>&nbsp;&nbsp; It's updated by {@link #initState(TypeElement)}
      */
-    boolean lombok = false;
+    private String packageName;
+
 
     /**
      * Represents the abstract syntax tree of the class being processed, retrieved from using {@link #trees} and {@link #classPath}
@@ -122,6 +122,21 @@ public class DTOProcessor extends AbstractProcessor {
      *<br/>&nbsp;&nbsp; It's filled by {@link #resolveClassAnnotation(TypeElement)}
      */
     private StringBuilder annotationEntity = new StringBuilder();
+
+    /**
+     * Contains the annotation that figures below {@link DTO} they will be included in generated DTOs.
+     *<br/>&nbsp;&nbsp; It's cleared by {@link #initState(TypeElement)}
+     *<br/>&nbsp;&nbsp; It's filled by {@link #resolveClassAnnotation(TypeElement)}
+     */
+    private StringBuilder sharedDtoAnnotation = new StringBuilder();
+
+    /**
+     * Contains the import needed for {@link #sharedDtoAnnotation}.
+     *<br/>&nbsp;&nbsp; It's cleared by {@link #initState(TypeElement)}
+     *<br/>&nbsp;&nbsp; It's filled by {@link #resolveClassAnnotation(TypeElement)}
+     */
+    private StringBuilder sharedDtoImport = new StringBuilder();
+
 
     /**
      * Pattern used to retrieve canonical names from a type mirror :
@@ -188,14 +203,17 @@ public class DTOProcessor extends AbstractProcessor {
      */
     private void generateFiles() {
 
-        System.err.println("LISTs STRING "+this.nameDTOList+" is empty "+this.nameDTOList.isEmpty() + "size "+this.nameDTOList.size());
+        System.err.println("LISTes STRING "+this.nameDTOList+" is empty "+this.nameDTOList.isEmpty() + "size "+this.nameDTOList.size());
         Filer filer = this.processingEnv.getFiler();
+
         for (int i = 0; i < this.nameDTOList.size(); i++) {
             try {
-                JavaFileObject fileObject = filer.createSourceFile("rabah.usthb.dto." + this.nameDTOList.get(i) + this.nameClass + "DTO");
+                JavaFileObject fileObject = filer.createSourceFile(this.packageName + ".dto." + this.nameDTOList.get(i) + this.nameClass + "DTO");
                 try (Writer writer = fileObject.openWriter()) {
-                    writer.write("package rabah.usthb.dto;\n\n");
-                    writer.write(this.importDTOList.get(i).toString() + "\n");
+                    writer.write("package "+this.packageName+".dto ;\n\n");
+                    writer.write(this.importDTOList.get(i).toString());
+                    writer.write(this.sharedDtoImport.toString() + "\n");
+                    writer.write(this.sharedDtoAnnotation.toString());
                     writer.write("public class " + this.nameDTOList.get(i) + this.nameClass + "DTO {\n");
                     writer.write(this.fieldDTOList.get(i).toString());
                     writer.write("}\n");
@@ -209,9 +227,10 @@ public class DTOProcessor extends AbstractProcessor {
 
             if(this.generateEntity) {
             try {
-                JavaFileObject fileObject = filer.createSourceFile("rabah.usthb.entity." + this.nameClass);
+                JavaFileObject fileObject = filer.createSourceFile(this.packageName+".entity." + this.nameClass);
+
                 try (Writer writer = fileObject.openWriter()) {
-                    writer.write("package rabah.usthb.entity;\n\n");
+                    writer.write("package "+this.packageName+".entity;\n\n");
                     writer.write(this.importEntity.toString() + "\n\n");
                     writer.write(this.annotationEntity.toString());
                     writer.write("public class " + this.nameClass + " {\n");
@@ -394,26 +413,29 @@ public class DTOProcessor extends AbstractProcessor {
         this.setGenerateEntity(rootElement);
         this.readAST(rootElement);
         this.nameClass = rootElement.getSimpleName().toString();
+        this.packageName = rootElement.getEnclosingElement().toString();
         this.importEntity = new StringBuilder();
         this.fieldEntity = new StringBuilder();
         this.annotationEntity = new StringBuilder();
+        this.sharedDtoAnnotation = new StringBuilder();
+        this.sharedDtoImport = new StringBuilder();
         this.nameDTOList.clear();
         this.importDTOList.clear();
         this.fieldDTOList.clear();
-        this.lombok = false;
     }
 
 
     /**
-     * Fetches the parameters of {@link DTO} and storing them in {@link #nameDTOList} , {@link #lombok} and if
+     * Fetches the parameters of {@link DTO} and storing them in {@link #nameDTOList} and {@link #packageName} if
      * {@link #generateEntity} is true it will look for other annotations of the rootElement and put them in {@link #annotationEntity} and
      * update {@link #importEntity} accordingly
      * @param rootElement represents the class being processed
      */
     private void resolveClassAnnotation(TypeElement rootElement) {
+        boolean belowDTO = false;
         for(AnnotationMirror annot : rootElement.getAnnotationMirrors()) {
             if (annot.getAnnotationType().toString().equals(dtoAnnotationName)) {
-
+                belowDTO = true;
                 System.err.println("EQUALS HAHA  "+  annot.getAnnotationType().asElement());
                 for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry : annot.getElementValues().entrySet()) {
 
@@ -423,30 +445,42 @@ public class DTOProcessor extends AbstractProcessor {
                             appendArrayValue(entry.getValue(),this.nameDTOList);
                             break;
 
-                        case "lombok" :
-                            this.lombok = (boolean) entry.getValue().getValue();
-                            break;
-
+                        case "packageName":
+                            String value = (String) entry.getValue().getValue();
+                            if(!value.trim().isEmpty()) {
+                                this.packageName = value;
+                            }
                     }
 
                 }
             }
-            else if (generateEntity){
+            else {
+                if (generateEntity) {
 
-                this.appendImport(annot.getAnnotationType().toString(),this.importEntity);
-                this.appendAnnotation(rootElement,annot,this.annotationEntity);
-                for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry : annot.getElementValues().entrySet()) {
-                    if(entry.getValue().getValue() instanceof VariableElement varValue) {
-                        this.appendImport(varValue.asType().toString(),this.importEntity);
+                    this.appendImport(annot.getAnnotationType().toString(), this.importEntity);
+                    this.appendAnnotation(rootElement, annot, this.annotationEntity);
+                    for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry : annot.getElementValues().entrySet()) {
+                        if (entry.getValue().getValue() instanceof VariableElement varValue) {
+                            this.appendImport(varValue.asType().toString(), this.importEntity);
+                        }
+                    }
+
+                }
+                if (belowDTO) {
+                    this.appendImport(annot.getAnnotationType().toString(), this.sharedDtoImport);
+                    this.appendAnnotation(rootElement, annot, this.sharedDtoAnnotation);
+                    for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry : annot.getElementValues().entrySet()) {
+                        if (entry.getValue().getValue() instanceof VariableElement varValue) {
+                            this.appendImport(varValue.asType().toString(), this.sharedDtoImport);
+                        }
                     }
                 }
-
             }
         }
 
 
         if(this.nameDTOList.isEmpty()) {
-            this.nameDTOList.add(" ");
+            this.nameDTOList.add("");
         }
 
     }
@@ -514,7 +548,10 @@ public class DTOProcessor extends AbstractProcessor {
      * @param annotationBuilder an annotation {@link java.lang.StringBuilder} that can be either {@link #fieldEntity} or {@link #annotationEntity}
      */
     private void appendAnnotation (Element element,AnnotationMirror annot,StringBuilder annotationBuilder) {
-        annotationBuilder.append("\t").append(trees.getTree(element,annot)).append("\n");
+        if(element instanceof VariableElement)
+            annotationBuilder.append("\t");
+
+        annotationBuilder.append(trees.getTree(element,annot)).append("\n");
     }
 
     /**

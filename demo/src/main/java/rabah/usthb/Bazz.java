@@ -1,12 +1,18 @@
 package rabah.usthb;
 
 import jakarta.persistence.Entity;
-import rabah.usthb.dtoprocessor.DTO;
-import rabah.usthb.dtoprocessor.DTOField;
+import io.github.rabah.usthb.DTO;
+import io.github.rabah.usthb.DTOField;
+import lombok.Builder;
+import lombok.Data;
+import lombok.Value;
 
 
 @Entity
-@DTO
+@Builder
+@DTO(packageName = "io.rabah.bazz")
+@Value
+@Data
 public class Bazz {
     @DTOField
     int id;
